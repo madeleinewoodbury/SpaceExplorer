@@ -1,4 +1,4 @@
-name: Generate Documentation and WebGL Build
+name: Build and Deploy WebGL
 
 on:
   push:
@@ -14,25 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-docs:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Install Doxygen
-      run: sudo apt-get install -y doxygen graphviz
-
-    - name: Generate Doxygen documentation
-      run: doxygen Doxyfile
-      
-    - name: Upload docs artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: documentation
-        path: html
-        retention-days: 1
-        
   build-webgl:
     runs-on: ubuntu-latest
     steps:
@@ -66,50 +47,16 @@ jobs:
           retention-days: 1
         
   deploy:
-    needs: [build-docs, build-webgl]
+    needs: build-webgl
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download all artifacts
+      - name: Download WebGL artifact
         uses: actions/download-artifact@v3
-        
-      - name: Create site structure
-        run: |
-          mkdir -p site
-          mv documentation/* site/
-          mkdir -p site/webgl
-          mv webgl-build/* site/webgl/
-          
-      - name: Create index page
-        run: |
-          cat > site/index.html << 'EOL'
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>Unity Project</title>
-              <style>
-                  body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-                  .button { 
-                      display: inline-block; 
-                      margin: 10px; 
-                      padding: 15px 30px; 
-                      background-color: #4CAF50; 
-                      color: white; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                  }
-              </style>
-          </head>
-          <body>
-              <h1>My Unity Project</h1>
-              <p>Welcome to the project site!</p>
-              <a href="./" class="button">View Documentation</a>
-              <a href="webgl/" class="button">Play WebGL Demo</a>
-          </body>
-          </html>
-          EOL
+        with:
+          name: webgl-build
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -117,7 +64,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: Build/WebGL
           
       - name: Deploy to GitHub Pages
         id: deployment
