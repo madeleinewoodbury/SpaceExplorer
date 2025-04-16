@@ -59,9 +59,9 @@ jobs:
           
       - name: Upload WebGL artifact
         uses: actions/upload-artifact@v3
-      with:
-        name: webgl-build
-        path: build/WebGL/webgl-build
+        with:
+          name: webgl-build
+          path: Build/WebGL
         
   deploy:
     needs: [build-docs, build-webgl]
