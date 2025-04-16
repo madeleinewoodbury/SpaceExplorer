@@ -1,51 +1,124 @@
-name: Generate Doxygen Documentation
+name: Generate Documentation and WebGL Build
 
 on:
   push:
     branches: [ main ]
-  # Uncomment this if you want to run on PRs too
-  # pull_request:
-  #   branches: [ main ]
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
 
     - name: Install Doxygen
       run: sudo apt-get install -y doxygen graphviz
 
     - name: Generate Doxygen documentation
-      run: |
-        # Use the existing Doxyfile
-        doxygen Doxyfile
-
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+      run: doxygen Doxyfile
+      
+    - name: Upload docs artifact
+      uses: actions/upload-artifact@v3
       with:
+        name: documentation
         path: html
-
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+        
+  build-webgl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          
+      - name: Cache Library folder
+        uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-
+          
+      - name: Build Unity WebGL
+        uses: game-ci/unity-builder@v3
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          buildName: webgl-build
+          
+      - name: Upload WebGL artifact
+        uses: actions/upload-artifact@v3
+      with:
+        name: webgl-build
+        path: build/WebGL/webgl-build
+        
+  deploy:
+    needs: [build-docs, build-webgl]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download documentation
+        uses: actions/download-artifact@v3
+        with:
+          name: documentation
+          path: site
+          
+      - name: Download WebGL build
+        uses: actions/download-artifact@v3
+        with:
+          name: webgl-build
+          path: site/webgl
+          
+      - name: Create index page
+        run: |
+          cat > site/index.html << 'EOL'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Unity Project</title>
+              <style>
+                  body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+                  .button { 
+                      display: inline-block; 
+                      margin: 10px; 
+                      padding: 15px 30px; 
+                      background-color: #4CAF50; 
+                      color: white; 
+                      text-decoration: none; 
+                      border-radius: 5px; 
+                  }
+              </style>
+          </head>
+          <body>
+              <h1>My Unity Project</h1>
+              <p>Welcome to the project site!</p>
+              <a href="html/" class="button">View Documentation</a>
+              <a href="webgl/" class="button">Play WebGL Demo</a>
+          </body>
+          </html>
+          EOL
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
