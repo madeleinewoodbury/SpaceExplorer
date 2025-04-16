@@ -71,13 +71,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Download documentation
-        uses: actions/download-artifact@v3
+        uses: actions/upload-pages-artifact@v3
         with:
           name: documentation
           path: site
           
       - name: Download WebGL build
-        uses: actions/download-artifact@v3
+        uses: actions/upload-pages-artifact@v3
         with:
           name: webgl-build
           path: site/webgl
