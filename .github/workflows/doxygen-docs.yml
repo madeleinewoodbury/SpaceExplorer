@@ -31,6 +31,7 @@ jobs:
       with:
         name: documentation
         path: html
+        retention-days: 1
         
   build-webgl:
     runs-on: ubuntu-latest
@@ -62,6 +63,7 @@ jobs:
         with:
           name: webgl-build
           path: Build/WebGL
+          retention-days: 1
         
   deploy:
     needs: [build-docs, build-webgl]
@@ -70,17 +72,15 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download documentation
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: documentation
-          path: site
-          
-      - name: Download WebGL build
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: webgl-build
-          path: site/webgl
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        
+      - name: Create site structure
+        run: |
+          mkdir -p site
+          mv documentation/* site/
+          mkdir -p site/webgl
+          mv webgl-build/* site/webgl/
           
       - name: Create index page
         run: |
@@ -105,7 +105,7 @@ jobs:
           <body>
               <h1>My Unity Project</h1>
               <p>Welcome to the project site!</p>
-              <a href="html/" class="button">View Documentation</a>
+              <a href="./" class="button">View Documentation</a>
               <a href="webgl/" class="button">Play WebGL Demo</a>
           </body>
           </html>
