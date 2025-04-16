@@ -56,7 +56,7 @@ jobs:
       - name: Download WebGL artifact
         uses: actions/download-artifact@v3
         with:
-          name: webgl-build
+          name: webgl-build # Ensure this matches the name used in the upload step
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
